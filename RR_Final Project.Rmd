@@ -1,0 +1,142 @@
+---
+title: 'Reproducible Research: Peer Assessment 2'
+output:
+  pdf_document: default
+  html_document:
+    keep_md: yes
+---
+
+#Reproducible Research: Review of Storm Impacts
+
+
+##Synopsis 
+In this data set, we reviewed the key components of 
+
+Immediately after the title, there should be a synopsis which describes and summarizes your analysis in at most 10 complete sentences.
+
+## Data Processing
+
+I first loaded the data via a common read.csv format and reviewed what the first six rows looked like using the head() command. 
+
+```{r} 
+stormdata <- read.csv("/Users/Sandeep/GitHub/Reproducible_Research/StormData.csv")
+dim(stormdata)
+head(stormdata)
+```
+
+It looks like from the first several rows of data, that only Tornados were taken into account for the first years of data.
+
+```{r fig.width=7, fig.height=6}
+if (dim(stormdata)[2] == 37) {
+    stormdata$year <- as.numeric(format(as.Date(stormdata$BGN_DATE, format = "%m/%d/%Y %H:%M:%S"), "%Y"))
+}
+hist(stormdata$year, col= "red", breaks = 10, xlab="Year", main= "Storm Events per Year")
+```
+
+Looking at the histogram, it's unlikely that all of a sudden in 1995 there became significantly more storms than in the past. More likely, it's that more storms began to be reported starting in 1995. For that reason, we will look at data from 1995 and after. 
+
+```{r}
+stormdata95 <- stormdata[stormdata$year >= 1995, ]
+```
+
+###Population Health 
+
+The first question revolved around the looking to understand the most harmful types of events to population health. Based on the first six rows of data, I was able to see that the effects of population health can be viewed by both the fatalities and injuries of an event. To look deeper, I first grouped the data by event type, and then looked at the summarized number of fatalities and injuries for each event. 
+
+```{r} 
+library(dplyr)
+library(ggplot2)
+library(knitr)
+events <- group_by(stormdata95, EVTYPE)
+eventimpact <- summarize(events, sum(FATALITIES, na.rm=TRUE), sum(INJURIES, na.rm=TRUE))
+colnames(eventimpact) <- c("event","fatalities","injuries")
+```
+
+Next, I ordered the data in two sets to view which events had the most fatalities, and which events had the most injuries. Utilizing the head() command once again, I was able to pull out the first six rows of each, which we will be able to review in the results section. 
+
+```{r} 
+fatalities <- eventimpact[with(eventimpact, order(-fatalities)), ]
+injuries <- eventimpact[with(eventimpact, order(-injuries)), ]
+
+fatalities <- head(fatalities)
+injuries <- head(injuries)
+```
+
+Lastly, I put together a bar charts to be able to show the events which led to the most fatalities and injuries. 
+
+```{r}
+fatalitiesplot <- qplot(event, data = fatalities, weight = fatalities, geom = "bar") + 
+    scale_y_continuous("Number of Fatalities") + 
+    theme(axis.text.x = element_text(angle = 45, 
+    hjust = 1)) + xlab("Severe Weather Type") + 
+    ggtitle("Total Fatalities by Severe Weather\n Events in the U.S.\n from 1995 - 2011")
+    
+injuriesplot <- qplot(event, data = injuries, weight = injuries, geom = "bar") + 
+    scale_y_continuous("Number of Injuries") + 
+    theme(axis.text.x = element_text(angle = 45, 
+    hjust = 1)) + xlab("Severe Weather Type") + 
+    ggtitle("Total Injuries by Severe Weather\n Events in the U.S.\n from 1995 - 2011")
+```
+
+###Economic Consequences 
+
+I utilized a similar approach in attempting to understand the events that 
+have the greatest economic consequences. Utilizing the grouping of events created earlier, I was able to summarize the data based on the sum of property damages and crop damages. 
+
+```{r}
+costimpact <- summarize(events, sum(PROPDMG, na.rm=TRUE), sum(CROPDMG, na.rm=TRUE))
+colnames(costimpact) <- c("event","propertydmg","cropdmg")
+``` 
+
+Based on the head () command, I once again ordered the data and pulled the top six events with the most property damage costs, crop damage costs, and total damage costs. 
+
+```{r}
+costimpact$totalcost <-  with(costimpact, propertydmg + cropdmg)
+costimpact <- costimpact[with(costimpact, order(-totalcost)), ]
+propdmgcost <- costimpact[with(costimpact, order(-propertydmg)), ]
+cropdmgcost <- costimpact[with(costimpact, order(-cropdmg)), ]
+totaldmgcost <- head(costimpact)
+propdmgcost <-head(propdmgcost)
+cropdmgcost <-head(cropdmgcost)
+```
+
+Finally, I plotted three graphs for the data. 
+
+```{r}
+propdmggraph <- qplot(event, data = propdmgcost, weight = propertydmg, geom = "bar") + 
+    scale_y_continuous("Total Cost") + 
+    theme(axis.text.x = element_text(angle = 45, 
+    hjust = 1)) + xlab("Severe Weather Type") + 
+    ggtitle("Total Cost by Severe Weather\n Events in the U.S.\n from 1995 - 2011")
+```
+
+##Results 
+
+Below, I have included the results of the analysis. 
+
+###Population Health 
+
+```{r fig.width=7, fig.height=6}
+library(grid)
+par(mfrow=c(1,2))
+plot(fatalitiesplot)
+plot(injuriesplot)
+
+library(gridExtra)
+grid.arrange(fatalitiesplot, injuriesplot, cols=2)
+
+
+```
+Based on the analysis, it looks like the highest number of fatalities have come from excessive heat. However, the most injuries by far came from tornadoes. These two contribute the most to the US's population health
+
+###Economic Consequences 
+
+```{r fig.width=7, fig.height=6}
+totalcostplot
+```
+
+Adding the property damage and crop costs together, we can see that flash floods, tornados, and tstm wind have the largest negative economic effects on the US. However, other events have very costly effects as well. 
+
+## Conclusion 
+
+This data has taught us a lot about the key events which lead to health and economic issues in the US. We should be cognizant of these issues and try to do our best to prepare for these events in the future. Additional analysis may look into where these events occur in the US. 
